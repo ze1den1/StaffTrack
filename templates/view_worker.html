@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+
+{% block title %}Сотрудник {{ worker.name }} - StaffTrack{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <h1><i class="fas fa-user"></i> {{ worker.name }}</h1>
+        <p>Информация о сотруднике</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('edit_worker', user_id=worker.id) }}" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Редактировать
+        </a>
+        <a href="{{ url_for('view_workers') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Назад к списку
+        </a>
+    </div>
+</div>
+
+<div class="profile-container">
+    <div class="profile-sidebar">
+        <div class="profile-card card">
+            <div class="profile-header">
+                <div class="profile-avatar large">
+                    {{ worker.name.split(' ')|map('first')|join('') }}
+                </div>
+                <div class="profile-info">
+                    <h2>{{ worker.name }}</h2>
+                    <p class="profile-role">
+                        <span class="role-badge role-{{ worker.role }}">
+                            {{ 'Администратор' if worker.role == 'admin' else 'Сотрудник' }}
+                        </span>
+                    </p>
+                    <p class="profile-date">
+                        <i class="fas fa-calendar-plus"></i>
+                        Зарегистрирован: {{ worker.created_at.strftime('%d.%m.%Y') }}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="profile-stats">
+                <div class="stat">
+                    <div class="stat-number">{{ total_shifts }}</div>
+                    <div class="stat-label">Всего смен</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">{{ total_hours|round(1) }}</div>
+                    <div class="stat-label">Всего часов</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">{{ avg_duration|round(1) }}</div>
+                    <div class="stat-label">Среднее время</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">
+                        {% if active_shift %}
+                        <span class="status-active">В работе</span>
+                        {% else %}
+                        <span class="status-inactive">Не активен</span>
+                        {% endif %}
+                    </div>
+                    <div class="stat-label">Текущий статус</div>
+                </div>
+            </div>
+            
+            {% if active_shift %}
+            <div class="current-shift-info">
+                <h4><i class="fas fa-clock"></i> Текущая смена</h4>
+                <p>Начало: {{ active_shift.start_time.strftime('%d.%m.%Y %H:%M') }}</p>
+                <p>Прошло времени: {{ current_duration|round(1) }} ч</p>
+                <form action="{{ url_for('admin_end_shift', shift_id=active_shift.id) }}" method="POST"
+                      onsubmit="return confirm('Завершить смену сотрудника {{ worker.name }}?');">
+                    <button type="submit" class="btn btn-danger btn-block btn-sm">
+                        <i class="fas fa-stop-circle"></i> Завершить смену
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="quick-actions card">
+            <h3><i class="fas fa-bolt"></i> Быстрые действия</h3>
+            <div class="action-links">
+                <a href="{{ url_for('view_shifts') }}?user={{ worker.id }}" class="action-link">
+                    <i class="fas fa-history"></i> Все смены сотрудника
+                </a>
+                <a href="mailto:{{ worker.email or '#' }}" class="action-link" {% if not worker.email %}disabled{% endif %}>
+                    <i class="fas fa-envelope"></i> Отправить email
+                </a>
+                {% if worker.phone_number %}
+                <a href="tel:{{ worker.phone_number }}" class="action-link">
+                    <i class="fas fa-phone"></i> Позвонить
+                </a>
+                {% endif %}
+                {% if worker.id != current_user.id %}
+                <form action="{{ url_for('delete_worker', user_id=worker.id) }}" method="POST" 
+                      class="delete-form" onsubmit="return confirm('Вы уверены, что хотите удалить сотрудника {{ worker.name }}?');">
+                    <button type="submit" class="action-link btn-delete">
+                        <i class="fas fa-trash"></i> Удалить сотрудника
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="profile-content">
+        <div class="info-sections">
+            <div class="info-section card">
+                <h3><i class="fas fa-id-card"></i> Контактная информация</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Логин:</span>
+                        <span class="info-value">{{ worker.username }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Email:</span>
+                        <span class="info-value">{{ worker.email or 'Не указан' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Телефон:</span>
+                        <span class="info-value">{{ worker.phone_number or 'Не указан' }}</span>
+                    </div>
+                    {% if worker.role == 'worker' %}
+                    <div class="info-item">
+                        <span class="info-label">Отдел:</span>
+                        <span class="info-value">{{ worker.department or 'Не указан' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Должность:</span>
+                        <span class="info-value">{{ worker.post or 'Не указана' }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="info-section card">
+                <h3><i class="fas fa-chart-bar"></i> Статистика за текущий месяц</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">{{ month_shifts }}</div>
+                        <div class="stat-label">Смен</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ month_hours|round(1) }}</div>
+                        <div class="stat-label">Часов</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ last_shift_date or '—' }}</div>
+                        <div class="stat-label">Последняя смена</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ longest_shift|round(1) }}</div>
+                        <div class="stat-label">Самая длинная (ч)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-section card">
+                <div class="section-header">
+                    <h3><i class="fas fa-history"></i> Последние смены</h3>
+                    <a href="{{ url_for('view_shifts') }}?user={{ worker.id }}" class="btn btn-sm btn-secondary">
+                        Все смены
+                    </a>
+                </div>
+                
+                {% if recent_shifts %}
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Начало</th>
+                                <th>Окончание</th>
+                                <th>Длительность</th>
+                                <th>Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for shift in recent_shifts %}
+                            <tr>
+                                <td>{{ shift.start_time.strftime('%d.%m.%Y') }}</td>
+                                <td>{{ shift.start_time.strftime('%H:%M') }}</td>
+                                <td>
+                                    {% if shift.end_time %}
+                                        {{ shift.end_time.strftime('%H:%M') }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if shift.duration %}
+                                        <strong>{{ shift.duration }} ч</strong>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if shift.end_time %}
+                                        <span class="badge badge-completed">Завершена</span>
+                                    {% else %}
+                                        <span class="badge badge-active">Активна</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-user-clock fa-2x"></i>
+                    <p>У сотрудника еще нет смен</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .profile-avatar.large {
+        width: 120px;
+        height: 120px;
+        font-size: 48px;
+    }
+    
+    .profile-sidebar {
+        width: 300px;
+    }
+    
+    .profile-content {
+        flex: 1;
+    }
+    
+    .profile-container {
+        display: flex;
+        gap: 30px;
+    }
+    
+    @media (max-width: 992px) {
+        .profile-container {
+            flex-direction: column;
+        }
+        
+        .profile-sidebar {
+            width: 100%;
+        }
+    }
+    
+    .header-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .current-shift-info {
+        margin-top: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .current-shift-info h4 {
+        color: #2c3e50;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .current-shift-info p {
+        margin-bottom: 5px;
+        color: #6c757d;
+    }
+    
+    .btn-sm {
+        padding: 8px 16px;
+        font-size: 14px;
+    }
+    
+    .btn-block {
+        width: 100%;
+    }
+    
+    .quick-actions {
+        margin-top: 20px;
+    }
+    
+    .action-links {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .action-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 15px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        text-decoration: none;
+        color: #495057;
+        transition: all 0.3s;
+        border: 1px solid transparent;
+    }
+    
+    .action-link:hover {
+        background: white;
+        border-color: #3498db;
+        color: #3498db;
+    }
+    
+    .action-link.btn-delete {
+        background: #f8d7da;
+        color: #721c24;
+        border-color: #f5c6cb;
+    }
+    
+    .action-link.btn-delete:hover {
+        background: #f1b0b7;
+        color: #491217;
+        border-color: #e6a2aa;
+    }
+    
+    .action-link[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .action-link[disabled]:hover {
+        background: #f8f9fa;
+        border-color: transparent;
+        color: #495057;
+    }
+    
+    .delete-form {
+        display: block;
+    }
+    
+    .delete-form button {
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: none;
+        cursor: pointer;
+        font-size: inherit;
+    }
+    
+    .info-sections {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .info-item {
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .info-label {
+        font-weight: 500;
+        color: #6c757d;
+        display: inline-block;
+        width: 120px;
+    }
+    
+    .info-value {
+        color: #2c3e50;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .stat-card {
+        text-align: center;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .stat-card .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+    
+    .stat-card .stat-label {
+        color: #6c757d;
+        font-size: 12px;
+    }
+    
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}

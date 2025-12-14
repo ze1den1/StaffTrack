@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Главная - StaffTrack{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="hero-content">
+        <h1>Учет рабочего времени персонала</h1>
+        <p>Простая и эффективная система для отслеживания смен сотрудников</p>
+        
+        {% if not current_user.is_authenticated %}
+        <div class="hero-buttons">
+            <a href="{{ url_for('login') }}" class="btn btn-primary">Войти в систему</a>
+            <a href="#features" class="btn btn-secondary">Узнать больше</a>
+        </div>
+        {% else %}
+        <div class="welcome-message">
+            <h2>Добро пожаловать, {{ current_user.name }}!</h2>
+            <p>Вы вошли как <strong>{{ 'Администратор' if current_user.role == 'admin' else 'Сотрудник' }}</strong></p>
+            
+            {% if current_user.role != 'admin' %}
+                {% if current_shift %}
+                <div class="current-shift">
+                    <h3><i class="fas fa-clock"></i> Текущая смена активна</h3>
+                    <p>Начало: {{ current_shift.start_time.strftime('%d.%m.%Y %H:%M') }}</p>
+                    <form action="/end_shift" method="POST" style="margin-top: 15px;">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-door-closed"></i> Закрыть смену
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="shift-actions">
+                    <form action="/start_shift" method="POST">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-door-open"></i> Открыть смену
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div id="features" class="features">
+    <div class="feature-card">
+        <div class="feature-icon">
+            <i class="fas fa-user-clock"></i>
+        </div>
+        <h3>Учет времени</h3>
+        <p>Отслеживайте начало и окончание рабочих смен сотрудников</p>
+    </div>
+    
+    <div class="feature-card">
+        <div class="feature-icon">
+            <i class="fas fa-chart-bar"></i>
+        </div>
+        <h3>Аналитика</h3>
+        <p>Получайте статистику по отработанным часам и эффективности</p>
+    </div>
+    
+    <div class="feature-card">
+        <div class="feature-icon">
+            <i class="fas fa-shield-alt"></i>
+        </div>
+        <h3>Безопасность</h3>
+        <p>Раздельный доступ для администраторов и сотрудников</p>
+    </div>
+</div>
+
+{% if current_user.is_authenticated and current_user.role == 'admin' %}
+<div class="admin-quick-actions card">
+    <h2 class="card-title">Быстрые действия</h2>
+    <div class="quick-actions-grid">
+        <a href="/workers" class="quick-action">
+            <i class="fas fa-users"></i>
+            <span>Просмотр сотрудников</span>
+        </a>
+        <a href="/shifts" class="quick-action">
+            <i class="fas fa-calendar-check"></i>
+            <span>Текущие смены</span>
+        </a>
+        <a href="/reports" class="quick-action">
+            <i class="fas fa-chart-pie"></i>
+            <span>Отчеты</span>
+        </a>
+        <a href="/workers/add" class="quick-action">
+            <i class="fas fa-user-plus"></i>
+            <span>Добавить сотрудника</span>
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<style>
+    .hero {
+        background: linear-gradient(135deg, #3498db, #2c3e50);
+        color: white;
+        padding: 60px 0;
+        text-align: center;
+        border-radius: 8px;
+        margin-bottom: 40px;
+    }
+    
+    .hero h1 {
+        font-size: 48px;
+        margin-bottom: 20px;
+    }
+    
+    .hero p {
+        font-size: 20px;
+        margin-bottom: 30px;
+        opacity: 0.9;
+    }
+    
+    .hero-buttons {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .welcome-message {
+        background: rgba(255,255,255,0.1);
+        padding: 30px;
+        border-radius: 8px;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .current-shift, .shift-actions {
+        margin-top: 30px;
+        padding: 20px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 8px;
+    }
+    
+    .features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 30px;
+        margin: 40px 0;
+    }
+    
+    .feature-card {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: transform 0.3s;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .feature-icon {
+        font-size: 48px;
+        color: #3498db;
+        margin-bottom: 20px;
+    }
+    
+    .feature-card h3 {
+        margin-bottom: 15px;
+        color: #2c3e50;
+    }
+    
+    .quick-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+    
+    .quick-action {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 25px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #2c3e50;
+        transition: all 0.3s;
+        border: 2px solid transparent;
+    }
+    
+    .quick-action:hover {
+        background: white;
+        border-color: #3498db;
+        transform: translateY(-3px);
+    }
+    
+    .quick-action i {
+        font-size: 36px;
+        margin-bottom: 15px;
+        color: #3498db;
+    }
+    
+    .quick-action span {
+        font-weight: 500;
+        text-align: center;
+    }
+</style>
+{% endblock %}

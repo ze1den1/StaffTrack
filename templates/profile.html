@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль - StaffTrack{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-user"></i> Мой профиль</h1>
+    <p>Личная информация и настройки учетной записи</p>
+</div>
+
+<div class="profile-container">
+    <div class="profile-sidebar">
+        <div class="profile-card card">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    {{ current_user.name.split(' ')|map('first')|join('') }}
+                </div>
+                <div class="profile-info">
+                    <h2>{{ current_user.name }}</h2>
+                    <h3>id: {{ current_user.username }}</h3>
+                    <p class="profile-role">
+                        <span class="role-badge role-{{ current_user.role }}">
+                            {{ 'Администратор' if current_user.role == 'admin' else 'Сотрудник' }}
+                        </span>
+                    </p>
+                    <p class="profile-date">
+                        <i class="fas fa-calendar-plus"></i>
+                        Зарегистрирован: {{ current_user.created_at.strftime('%d.%m.%Y') }}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="profile-stats">
+                <div class="stat">
+                    <div class="stat-number">{{ total_shifts }}</div>
+                    <div class="stat-label">Всего смен</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">{{ total_hours|round(1) }}</div>
+                    <div class="stat-label">Всего часов</div>
+                </div>
+                {% if current_user.role == 'worker' %}
+                <div class="stat">
+                    <div class="stat-number">
+                        {% if current_shift %}
+                        <span class="status-active">В работе</span>
+                        {% else %}
+                        <span class="status-inactive">Не активен</span>
+                        {% endif %}
+                    </div>
+                    <div class="stat-label">Текущий статус</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if current_user.role == 'worker' and current_shift %}
+        <div class="current-shift-card card">
+            <h3><i class="fas fa-clock"></i> Текущая смена</h3>
+            <div class="shift-info">
+                <div class="info-row">
+                    <span class="label">Начало:</span>
+                    <span class="value">{{ current_shift.start_time.strftime('%d.%m.%Y %H:%M') }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Прошло времени:</span>
+                    <span class="value">{{ current_duration|round(1) }} ч</span>
+                </div>
+            </div>
+            <form action="{{ url_for('end_shift') }}" method="POST" style="margin-top: 15px;">
+                <button type="submit" class="btn btn-danger btn-block">
+                    <i class="fas fa-door-closed"></i> Закрыть смену
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="profile-content">
+        <div class="tabs">
+            <a href="#info" class="tab active">Личная информация</a>
+            <a href="#security" class="tab">Безопасность</a>
+            <a href="#activity" class="tab">Активность</a>
+        </div>
+        
+        <div class="tab-content">
+            <div id="info" class="tab-pane active">
+                <div class="form-card card">
+                    <h3><i class="fas fa-user-edit"></i> Редактировать информацию</h3>
+                    <form method="POST" action="{{ url_for('update_profile') }}">
+                        <div class="form-group">
+                            <label for="edit_name">ФИО</label>
+                            <input type="text" id="edit_name" name="name" class="form-control"
+                                   value="{{ current_user.name }}" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit_email">Email</label>
+                            <input type="email" id="edit_email" name="email" class="form-control"
+                                   value="{{ current_user.email or '' }}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit_phone">Телефон</label>
+                            <input type="tel" id="edit_phone" name="phone_number" class="form-control"
+                                   value="{{ current_user.phone_number or '' }}">
+                        </div>
+
+                        {% if current_user.role == 'worker' %}
+                        <div class="form-group">
+                            <label for="edit_department">Отдел</label>
+                            <input type="text" id="edit_department" name="department" class="form-control"
+                                   value="{{ current_user.department or '' }}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit_position">Должность</label>
+                            <input type="text" id="edit_position" name="post" class="form-control"
+                                   value="{{ current_user.post or '' }}">
+                        </div>
+                        {% endif %}
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Сохранить изменения
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="security" class="tab-pane">
+                <div class="form-card card">
+                    <h3><i class="fas fa-lock"></i> Смена пароля</h3>
+                    <form method="POST" action="{{ url_for('change_password') }}">
+                        <div class="form-group">
+                            <label for="current_password">Текущий пароль</label>
+                            <input type="password" id="current_password" name="current_password" 
+                                   class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="new_password">Новый пароль</label>
+                            <input type="password" id="new_password" name="new_password" 
+                                   class="form-control" required minlength="6">
+                            <small class="form-text">Минимум 6 символов</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="confirm_new_password">Подтверждение нового пароля</label>
+                            <input type="password" id="confirm_new_password" name="confirm_new_password" 
+                                   class="form-control" required minlength="6">
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-key"></i> Сменить пароль
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="activity" class="tab-pane">
+                <div class="activity-card card">
+                    <h3><i class="fas fa-history"></i> Последние смены</h3>
+                    {% if recent_shifts %}
+                    <div class="activity-list">
+                        {% for shift in recent_shifts %}
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="fas fa-{{ 'door-open' if not shift.end_time else 'door-closed' }}"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p>
+                                    {{ 'Открыта смена' if not shift.end_time else 'Закрыта смена' }}
+                                    {% if shift.duration %}
+                                    ({{ shift.duration }} ч)
+                                    {% endif %}
+                                </p>
+                                <small>{{ shift.start_time.strftime('%d.%m.%Y %H:%M') }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <a href="{{ url_for('my_shifts') }}" class="btn btn-secondary btn-block" style="margin-top: 20px;">
+                        <i class="fas fa-list"></i> Все смены
+                    </a>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-user-clock fa-2x"></i>
+                        <p>У вас еще нет смен</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .profile-container {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 30px;
+    }
+    
+    @media (max-width: 992px) {
+        .profile-container {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .profile-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, #3498db, #2c3e50);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 36px;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+    
+    .profile-info h2 {
+        color: #2c3e50;
+        margin-bottom: 10px;
+    }
+    
+    .profile-role {
+        margin-bottom: 15px;
+    }
+    
+    .profile-date {
+        color: #6c757d;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+    }
+    
+    .profile-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .stat {
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .stat-number {
+        font-size: 24px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 12px;
+    }
+    
+    .current-shift-card .shift-info {
+        margin: 20px 0;
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .info-row .label {
+        color: #6c757d;
+    }
+    
+    .info-row .value {
+        font-weight: 500;
+        color: #2c3e50;
+    }
+    
+    .btn-block {
+        width: 100%;
+    }
+    
+    .tabs {
+        display: flex;
+        border-bottom: 2px solid #eee;
+        margin-bottom: 30px;
+    }
+    
+    .tab {
+        padding: 15px 25px;
+        text-decoration: none;
+        color: #6c757d;
+        font-weight: 500;
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s;
+    }
+    
+    .tab:hover {
+        color: #3498db;
+    }
+    
+    .tab.active {
+        color: #3498db;
+        border-bottom-color: #3498db;
+    }
+    
+    .tab-pane {
+        display: none;
+    }
+    
+    .tab-pane.active {
+        display: block;
+    }
+</style>
+
+<!-- Простая навигация по табам -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('.tab');
+    const panes = document.querySelectorAll('.tab-pane');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href').substring(1);
+            
+            // Убираем активный класс у всех табов и панелей
+            tabs.forEach(t => t.classList.remove('active'));
+            panes.forEach(p => p.classList.remove('active'));
+            
+            // Добавляем активный класс текущему табу и панели
+            this.classList.add('active');
+            document.getElementById(targetId).classList.add('active');
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block title %}Отчеты - StaffTrack{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-chart-bar"></i> Отчеты и аналитика</h1>
+    <p>Статистика и аналитические данные по работе сотрудников</p>
+</div>
+
+<div class="reports-controls card">
+    <form method="GET" action="{{ url_for('reports') }}" class="period-form">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="period"><i class="fas fa-calendar"></i> Период</label>
+                <select id="period" name="period" class="form-control" onchange="this.form.submit()">
+                    <option value="week" {% if period == 'week' %}selected{% endif %}>За неделю</option>
+                    <option value="month" {% if period == 'month' %}selected{% endif %}>За месяц</option>
+                    <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>За квартал</option>
+                    <option value="year" {% if period == 'year' %}selected{% endif %}>За год</option>
+                    <option value="custom" {% if period == 'custom' %}selected{% endif %}>Произвольный</option>
+                </select>
+            </div>
+            
+            {% if period == 'custom' %}
+            <div class="form-group">
+                <label for="start_date"><i class="fas fa-calendar-alt"></i> Начало</label>
+                <input type="date" id="start_date" name="start_date" class="form-control" 
+                       value="{{ start_date }}" onchange="this.form.submit()">
+            </div>
+            <div class="form-group">
+                <label for="end_date"><i class="fas fa-calendar-alt"></i> Конец</label>
+                <input type="date" id="end_date" name="end_date" class="form-control" 
+                       value="{{ end_date }}" onchange="this.form.submit()">
+            </div>
+            {% endif %}
+            
+            <div class="form-group">
+                <label for="user"><i class="fas fa-user"></i> Сотрудник</label>
+                <select id="user" name="user" class="form-control" onchange="this.form.submit()">
+                    <option value="">Все сотрудники</option>
+                    {% for user in all_users %}
+                    <option value="{{ user.id }}" {% if user_filter == user.id|string %}selected{% endif %}>
+                        {{ user.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="reports-grid">
+    <div class="report-card card">
+        <div class="report-header">
+            <h3><i class="fas fa-chart-pie"></i> Общая статистика</h3>
+        </div>
+        <div class="report-content">
+            <div class="stat-row">
+                <div class="stat-name">Всего отработано часов:</div>
+                <div class="stat-value">{{ total_hours|round(1) }} ч</div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-name">Количество смен:</div>
+                <div class="stat-value">{{ shift_count }}</div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-name">Средняя длительность смены:</div>
+                <div class="stat-value">{{ avg_duration|round(1) }} ч</div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-name">Самая длинная смена:</div>
+                <div class="stat-value">{{ max_duration|round(1) }} ч</div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-name">Самая короткая смена:</div>
+                <div class="stat-value">{{ min_duration|round(1) }} ч</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="report-card card">
+        <div class="report-header">
+            <h3><i class="fas fa-user-clock"></i> По сотрудникам</h3>
+        </div>
+        <div class="report-content">
+            <div class="top-workers">
+                {% for worker in top_workers %}
+                <div class="worker-stat">
+                    <div class="worker-info">
+                        <div class="user-avatar xs">
+                            {{ worker.user.name.split(' ')|map('first')|join('') }}
+                        </div>
+                        <div>
+                            <div class="worker-name">{{ worker.user.name }}</div>
+                            <div class="worker-shifts">{{ worker.shift_count }} смен</div>
+                        </div>
+                    </div>
+                    <div class="worker-hours">{{ worker.total_hours|round(1) }} ч</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="report-card card">
+    <div class="report-header">
+        <h3><i class="fas fa-calendar-week"></i> Распределение по дням</h3>
+    </div>
+    <div class="report-content">
+        <div class="day-stats">
+            {% for day_stat in day_stats %}
+            <div class="day-stat">
+                <div class="day-name">{{ day_stat.day }}</div>
+                <div class="day-bar">
+                    <div class="bar-fill" style="width: {{ (day_stat.hours / max_day_hours * 100) if max_day_hours > 0 else 0 }}%"></div>
+                </div>
+                <div class="day-hours">{{ day_stat.hours|round(1) }} ч</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="report-actions card">
+    <h3><i class="fas fa-download"></i> Экспорт отчетов</h3>
+    <div class="export-buttons">
+        <a href="/export_reports"
+           class="btn btn-secondary">
+            <i class="fas fa-file-csv"></i> CSV
+        </a>
+        <a href="/export_reports"
+           class="btn btn-secondary">
+            <i class="fas fa-file-pdf"></i> PDF
+        </a>
+        <a href="/export_reports"
+           class="btn btn-secondary">
+            <i class="fas fa-file-excel"></i> Excel
+        </a>
+    </div>
+</div>
+
+<style>
+    .period-form .form-row {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+
+    .reports-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .report-header {
+        padding-bottom: 15px;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .report-header h3 {
+        color: #2c3e50;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .stat-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+
+    .stat-name {
+        color: #6c757d;
+    }
+
+    .stat-value {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .top-workers {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .worker-stat {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .worker-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .user-avatar.xs {
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+    }
+
+    .worker-name {
+        font-weight: 500;
+        color: #2c3e50;
+    }
+
+    .worker-shifts {
+        font-size: 12px;
+        color: #6c757d;
+    }
+
+    .worker-hours {
+        font-weight: bold;
+        color: #3498db;
+        font-size: 18px;
+    }
+
+    .day-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .day-stat {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .day-name {
+        width: 100px;
+        font-weight: 500;
+        color: #2c3e50;
+    }
+
+    .day-bar {
+        flex: 1;
+        height: 20px;
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #3498db, #2ecc71);
+        border-radius: 10px;
+    }
+
+    .day-hours {
+        width: 80px;
+        text-align: right;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .export-buttons {
+        display: flex;
+        gap: 15px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+    }
+
+    .export-buttons .btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+</style>
+
+<!-- Минимальный JavaScript для автоматической отправки формы при изменении -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Форма уже отправляется автоматически благодаря onchange
+    // Но можно добавить дополнительную логику здесь если нужно
+});
+</script>
+{% endblock %}

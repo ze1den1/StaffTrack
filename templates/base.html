@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Учет персонала{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('index') }}" class="logo">
+                <i class="fas fa-users"></i>
+                <span>StaffTrack</span>
+            </a>
+
+            <div class="nav-links">
+                {% if current_user.is_authenticated %}
+                    {% if current_user.role == 'admin' %}
+                        <a href="/admin/dashboard"><i class="fas fa-tachometer-alt"></i> Панель админа</a>
+                        <a href="/workers"><i class="fas fa-user-tie"></i> Сотрудники</a>
+                        <a href="/shifts"><i class="fas fa-calendar-alt"></i> Смены</a>
+                    {% else %}
+                        <a href="/profile"><i class="fas fa-user"></i> Мой профиль</a>
+                        <a href="/my_shifts"><i class="fas fa-history"></i> Мои смены</a>
+                    {% endif %}
+                    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Выход</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}"><i class="fas fa-sign-in-alt"></i> Вход</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 StaffTrack. Система учета рабочего времени. By gordey006</p>
+        </div>
+    </footer>
+</body>
+</html>

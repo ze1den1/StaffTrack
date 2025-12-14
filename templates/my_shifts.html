@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Мои смены - StaffTrack{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <h1><i class="fas fa-history"></i> Мои смены</h1>
+        <p>История всех моих рабочих смен</p>
+    </div>
+    {% if not current_shift %}
+    <form action="{{ url_for('start_shift') }}" method="POST">
+        <button type="submit" class="btn btn-success">
+            <i class="fas fa-door-open"></i> Открыть смену
+        </button>
+    </form>
+    {% endif %}
+</div>
+
+<div class="summary-card card">
+    <h3><i class="fas fa-chart-line"></i> Статистика за текущий месяц</h3>
+    <div class="summary-stats">
+        <div class="summary-item">
+            <div class="summary-value">{{ current_month_shifts }}</div>
+            <div class="summary-label">Смен</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-value">{{ current_month_hours|round(1) }}</div>
+            <div class="summary-label">Часов</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-value">{{ avg_duration|round(1) }}</div>
+            <div class="summary-label">Среднее время (ч)</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-value">
+                {% if current_shift %}
+                <span class="status-active">В работе</span>
+                {% else %}
+                <span class="status-inactive">Не активен</span>
+                {% endif %}
+            </div>
+            <div class="summary-label">Текущий статус</div>
+        </div>
+    </div>
+</div>
+
+<div class="filters-card card">
+    <form method="GET" action="{{ url_for('my_shifts') }}" class="filter-form">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="month"><i class="fas fa-calendar"></i> Месяц</label>
+                <select id="month" name="month" class="form-control" onchange="this.form.submit()">
+                    {% for m in months %}
+                    <option value="{{ m.value }}" {% if m.selected %}selected{% endif %}>{{ m.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="year"><i class="fas fa-calendar-alt"></i> Год</label>
+                <select id="year" name="year" class="form-control" onchange="this.form.submit()">
+                    {% for y in years %}
+                    <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>&nbsp;</label>
+                <a href="{{ url_for('my_shifts') }}" class="btn btn-secondary">
+                    <i class="fas fa-redo"></i> Сбросить
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="shifts-list card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Начало смены</th>
+                    <th>Окончание смены</th>
+                    <th>Длительность</th>
+                    <th>Статус</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for shift in shifts %}
+                <tr>
+                    <td>{{ shift.start_time.strftime('%d.%m.%Y') }}</td>
+                    <td>{{ shift.start_time.strftime('%H:%M') }}</td>
+                    <td>
+                        {% if shift.end_time %}
+                            {{ shift.end_time.strftime('%H:%M') }}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if shift.duration %}
+                            <strong>{{ shift.duration }} ч</strong>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if shift.end_time %}
+                            <span class="badge badge-completed">Завершена</span>
+                        {% else %}
+                            <span class="badge badge-active">Активна</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if shifts|length == 0 %}
+    <div class="empty-state">
+        <i class="fas fa-calendar-times fa-3x"></i>
+        <h3>Смены не найдены</h3>
+        <p>У вас нет смен за выбранный период</p>
+    </div>
+    {% endif %}
+    
+    <!-- Пагинация -->
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="{{ url_for('my_shifts', page=page-1, month=selected_month, year=selected_year) }}" 
+           class="page-link">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        {% endif %}
+        
+        {% for p in range(1, total_pages+1) %}
+            {% if p == page %}
+            <span class="page-link active">{{ p }}</span>
+            {% else %}
+            <a href="{{ url_for('my_shifts', page=p, month=selected_month, year=selected_year) }}" 
+               class="page-link">{{ p }}</a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page < total_pages %}
+        <a href="{{ url_for('my_shifts', page=page+1, month=selected_month, year=selected_year) }}" 
+           class="page-link">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div class="export-card card">
+    <h3><i class="fas fa-download"></i> Экспорт данных</h3>
+    <p>Вы можете экспортировать историю своих смен для личного учета</p>
+    <div class="export-buttons">
+        <a href="/export_my_shifts"
+           class="btn btn-secondary">
+            <i class="fas fa-file-csv"></i> CSV
+        </a>
+        <a href="/export_my_shifts"
+           class="btn btn-secondary">
+            <i class="fas fa-file-pdf"></i> PDF
+        </a>
+    </div>
+</div>
+
+<style>
+    .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+    
+    .summary-item {
+        text-align: center;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .summary-value {
+        font-size: 32px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+    
+    .summary-label {
+        color: #6c757d;
+        font-size: 14px;
+    }
+    
+    .export-card {
+        margin-top: 30px;
+    }
+    
+    .export-card p {
+        color: #6c757d;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
